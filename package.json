@@ -1,0 +1,19 @@
+{
+  "name": "fhi-stranakova",
+  "version": "1.0.0",
+  "description": "---",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adastranakova/fhi-stranakova.git"
+  },
+  "author": "Adriana Stranakova",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/adastranakova/fhi-stranakova/issues"
+  },
+  "homepage": "https://github.com/adastranakova/fhi-stranakova#readme"
+}
