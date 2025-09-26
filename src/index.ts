@@ -1,6 +1,10 @@
-const person1 = {
-    name: 'Alice',
-    age: 30
+function factorial(num: number){
+    let fact = 1;
+    for (let i = 1; i <= num; i++) {
+        fact = fact * i;
+    }
+    console.log(fact);
 }
-
-console.log(person1);
+factorial(5);
+factorial(4);
+factorial(1);
