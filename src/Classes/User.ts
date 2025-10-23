@@ -1,3 +1,4 @@
+// pouzivatel - mame jeho meno, mail a id
 export class User {
     private name: string;
     private email: string;
@@ -9,6 +10,7 @@ export class User {
         this.id = id;
     }
 
+    //funkcie
     getName(): string {
         return this.name;
     }

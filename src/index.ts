@@ -6,53 +6,59 @@ import {User} from "./Classes/User";
 import {Account} from "./Classes/Account";
 import {BikeStatus} from "./Classes/BikeStatus";
 
-// Create the bike share system
+// vytvorenie systemu na poziciavanie bicyklov, print uspesneho vytvorenia
 const cityBikes = new BikeShareSystem("CityBikes");
 console.log("=== Bike Share System Created ===\n");
 
-// Create stations with slots
+// vytvorenie 2 stanic - vieme im nastavit nazov a adresu
 const centralStation = new Station("Central Station", "123 Main St", 5);
 const parkStation = new Station("Park Station", "456 Park Ave", 3);
 
+// pridanie "slotov" do jednotlivych stanic
 cityBikes.addStation(centralStation);
 cityBikes.addStation(parkStation);
 console.log("Created 2 stations:");
-console.log(`  - ${centralStation.getName()} with 5 slots`);
-console.log(`  - ${parkStation.getName()} with 3 slots\n`);
+console.log(`  - ${centralStation.getName()} with 5 slots`); // pridali sme 5 slotov
+console.log(`  - ${parkStation.getName()} with 3 slots\n`); // pridali sme 3 sloty
 
-// Create bikes and lock them in slots at Central Station
+// vytvorenie 3 bicyklov
 const bike1 = new Bike("BIKE001");
 const bike2 = new Bike("BIKE002");
 const bike3 = new Bike("BIKE003");
 
+// hesla pre sloty
 const password1 = centralStation.lockBikeInSlot(1, bike1);
 const password2 = centralStation.lockBikeInSlot(2, bike2);
 const password3 = centralStation.lockBikeInSlot(3, bike3);
 
+//print pridania bicyklov
 console.log("=== Bikes Added to Central Station ===");
 console.log(`Bike ${bike1.getId()} locked in slot 1, password: ${password1}`);
 console.log(`Bike ${bike2.getId()} locked in slot 2, password: ${password2}`);
 console.log(`Bike ${bike3.getId()} locked in slot 3, password: ${password3}`);
 console.log(`Available bikes at Central: ${centralStation.getAvailableCount()}\n`);
 
-// Create users and accounts
+// pridanie pouzivatelov - maju meno, email a id
 const user1 = new User("Alice Smith", "alice@email.com", "MEM001");
 const user2 = new User("Bob Jones", "bob@email.com", "MEM002");
 
+// vytvorenie uctu
 const account1 = new Account(user1);
 const account2 = new Account(user2);
 
+// pridanie prostriedkov
 account1.addFunds(50);
 account2.addFunds(30);
 
 cityBikes.addAccount(account1);
 cityBikes.addAccount(account2);
 
+// print pouzivatelov s dostupnymi prostriedkami
 console.log("=== Users Created ===");
 console.log(`  ${user1.getName()} - Balance: $${account1.getBalance()}`);
 console.log(`  ${user2.getName()} - Balance: $${account2.getBalance()}\n`);
 
-// Alice rents a bike
+// Alice - pozicanie bicykla z centralStation
 console.log("=== Alice Rents a Bike ===");
 const rental1 = cityBikes.rentBike(account1, centralStation, password1!);
 if (rental1) {
@@ -62,22 +68,26 @@ if (rental1) {
     console.log(`  Available bikes at Central: ${centralStation.getAvailableCount()}\n`);
 }
 
-// Bob tries to rent with wrong password
+// Bob - skuska zleho hesla
 console.log("=== Bob Tries Wrong Password ===");
 const failedRental = cityBikes.rentBike(account2, centralStation, "9999");
 if (!failedRental) {
     console.log("Failed to rent bike - wrong password\n");
 }
 
-// Bob rents with correct password
+// Bob - zadanie spravneho hesla
 console.log("=== Bob Rents a Bike ===");
 const rental2 = cityBikes.rentBike(account2, centralStation, password2!);
 if (rental2) {
     console.log(`  ${user2.getName()} rented ${rental2.getBike().getId()}`);
     console.log(`  Available bikes at Central: ${centralStation.getAvailableCount()}\n`);
+    console.log(`Simulating a longer ride - 45 minutes.\n` )
+
+    const simStartTime = (rental2 as any).startTime;
+    (rental2 as any).startTime = new Date(simStartTime.getTime() - 45 * 60 * 1000);
 }
 
-// Alice returns the bike to Park Station
+// Alice - vratenie bicykla do inej stanice
 console.log("=== Alice Returns Bike to Park Station ===");
 const returnPassword1 = cityBikes.returnBike(account1, parkStation);
 if (returnPassword1 && rental1) {
@@ -89,8 +99,9 @@ if (returnPassword1 && rental1) {
     console.log(`  Available bikes at Park Station: ${parkStation.getAvailableCount()}\n`);
 }
 
-// Bob returns his bike to Central Station
+// Bob - vratenie bicykla do tej istej stanie
 console.log("=== Bob Returns His Bike ===");
+
 const returnPassword2 = cityBikes.returnBike(account2, centralStation);
 if (returnPassword2) {
     console.log(`  ${user2.getName()} returned bike`);
@@ -99,13 +110,13 @@ if (returnPassword2) {
     console.log(`  Available bikes at Central: ${centralStation.getAvailableCount()}\n`);
 }
 
-// Set a bike to maintenance status (just showing status change)
+// ukazanie zmeny stavu bicykla
 console.log("=== Bike Status Change ===");
 bike3.setStatus(BikeStatus.Maintenance);
 console.log(`  ${bike3.getId()} status changed to: ${bike3.getStatus()}`);
 console.log(`  Is available: ${bike3.isAvailable()}\n`);
 
-// Final system status
+// Konecny stav
 console.log("=== Final System Status ===");
 console.log(`Central Station:`);
 console.log(`  - Available bikes: ${centralStation.getAvailableCount()}`);

@@ -1,6 +1,7 @@
 import { SlotStatus } from './SlotStatus';
 import { Bike } from './Bike';
 
+// slot ma svoje cislo, moze mat v sebe bicykel, heslo optional, a status
 export class Slot {
     private slotNumber: number;
     private bike: Bike | undefined;
@@ -12,6 +13,7 @@ export class Slot {
         this.status = SlotStatus.Empty;
     }
 
+    // funkcie pre sloty
     getSlotNumber(): number {
         return this.slotNumber;
     }
@@ -24,6 +26,7 @@ export class Slot {
         return this.status === SlotStatus.Occupied;
     }
 
+    // momentalne nevyuzivame - ale vieme zadat, ze so slotom je nieco zle
     isFaulty(): boolean {
         return this.status === SlotStatus.Faulty;
     }
@@ -61,6 +64,7 @@ export class Slot {
         return this.bike;
     }
 
+    // generovanie hesla
     private generatePassword(): string {
         return Math.floor(1000 + Math.random() * 9000).toString();
     }

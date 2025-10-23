@@ -1,18 +1,18 @@
 import { User } from './User';
 import { Rental } from './Rental';
 
+// ucet - pouzivatel, prostriedky, aktivne pozicania
 export class Account {
     private user: User;
     private balance: number;
     private activeRental: Rental | undefined;
-    private rentalHistory: Rental[];
 
     constructor(user: User) {
         this.user = user;
         this.balance = 0;
-        this.rentalHistory = [];
     }
 
+    // funkcie
     getUser(): User {
         return this.user;
     }
@@ -39,7 +39,6 @@ export class Account {
 
     endRental(): void {
         if (this.activeRental) {
-            this.rentalHistory.push(this.activeRental);
             this.activeRental = undefined;
         }
     }

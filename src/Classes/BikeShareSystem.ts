@@ -30,7 +30,7 @@ export class BikeShareSystem {
         const bike = station.unlockBikeFromSlot(password);
         if (bike && bike.isAvailable()) {
             bike.setStatus(BikeStatus.Rented);
-            const rental = new Rental(bike, account.getUser(), station, password);
+            const rental = new Rental(bike, account.getUser());
             account.startRental(rental);
             return rental;
         }
@@ -50,7 +50,6 @@ export class BikeShareSystem {
 
         const password = station.lockBikeInSlot(emptySlot.getSlotNumber(), bike);
         if (password) {
-            rental.endRental(station);
             account.endRental();
 
             const duration = rental.getDuration();

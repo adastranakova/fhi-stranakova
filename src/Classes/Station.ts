@@ -1,6 +1,7 @@
 import { Slot } from './Slot';
 import { Bike } from './Bike';
 
+// stanica ma svoje meno, adresu/lokaciu, sloty do ktorych davame bicykle
 export class Station {
     private name: string;
     private address: string;
@@ -16,6 +17,7 @@ export class Station {
         }
     }
 
+    // funkcie
     getName(): string {
         return this.name;
     }
@@ -45,14 +47,6 @@ export class Station {
 
     getAvailableCount(): number {
         return this.getAvailableBikes().length;
-    }
-
-    getEmptySlots(): Slot[] {
-        return this.slots.filter(s => s.isEmpty());
-    }
-
-    getEmptySlotCount(): number {
-        return this.getEmptySlots().length;
     }
 
     findEmptySlot(): Slot | undefined {

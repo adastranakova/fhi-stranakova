@@ -1,31 +1,22 @@
 import { Bike } from './Bike';
 import { User } from './User';
-import { Station } from './Station';
 
+// bicykel, pouzivatel, zaciatok, koniec
 export class Rental {
     private bike: Bike;
     private user: User;
-    private startStation: Station;
-    private endStation: Station | undefined;
     private startTime: Date;
     private endTime: Date | undefined;
-    private unlockPassword: string;
 
-    constructor(bike: Bike, user: User, startStation: Station, unlockPassword: string) {
+    constructor(bike: Bike, user: User) {
         this.bike = bike;
         this.user = user;
-        this.startStation = startStation;
-        this.unlockPassword = unlockPassword;
         this.startTime = new Date();
     }
 
+    // funkcie
     getBike(): Bike {
         return this.bike;
-    }
-
-    endRental(endStation: Station): void {
-        this.endStation = endStation;
-        this.endTime = new Date();
     }
 
     getDuration(): number {
