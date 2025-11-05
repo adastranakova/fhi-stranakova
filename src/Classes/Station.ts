@@ -53,4 +53,7 @@ export class Station {
         return this.slots.find(s => s.isEmpty());
     }
 
+    getAddress() {
+        return this.address;
+    }
 }

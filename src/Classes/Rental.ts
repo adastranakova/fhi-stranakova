@@ -25,4 +25,8 @@ export class Rental {
         }
         return new Date().getTime() - this.startTime.getTime();
     }
+
+    getUser() {
+        return this.user;
+    }
 }
