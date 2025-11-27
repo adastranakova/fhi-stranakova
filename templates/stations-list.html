@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stations</title>
+    <link rel="stylesheet" href="./main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-md bg-body-tertiary" data-bs-theme="dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">🚴 CityBikes</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="bikes.html">Bikes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="users.html">Users</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="stations.html">Stations</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="rentals.html">Rentals</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 class="mt-5">Stations</h1>
+    <div class="card shadow mt-3">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Station Name</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Available Bikes</th>
+                </tr>
+                </thead>
+                <tbody id="stationsTableBody">
+                <tr>
+                    <td>Central Station</td>
+                    <td>123 Main St</td>
+                    <td>3 bikes</td>
+                </tr>
+                <tr>
+                    <td>Park Station</td>
+                    <td>456 Park Ave</td>
+                    <td>1 bike</td>
+                </tr>
+                <tr>
+                    <td>Downtown Station</td>
+                    <td>789 Center Blvd</td>
+                    <td>5 bikes</td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="row justify-content-end">
+                <div class="col-auto">
+                    <button class="btn btn-primary">
+                        <i class="bi bi-plus"></i> Add Station
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+
+</body>
+</html>

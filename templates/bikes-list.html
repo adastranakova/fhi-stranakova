@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bikes</title>
+    <link rel="stylesheet" href="./main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+</head>
+<body>
+<nav class="navbar navbar-expand-md bg-body-tertiary" data-bs-theme="dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">🚴 BikeShare</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">Bikes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Users</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Stations</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Rentals</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 class="mt-5">Bikes</h1>
+    <div class="card shadow mt-3">
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Bike ID</th>
+                    <th scope="col">Status</th>
+                </tr>
+                </thead>
+                <tbody id="bikesTableBody">
+                <tr>
+                    <td>BIKE001</td>
+                    <td><span class="badge bg-success">Available</span></td>
+                </tr>
+                <tr>
+                    <td>BIKE002</td>
+                    <td><span class="badge bg-danger">Rented</span></td>
+                </tr>
+                <tr>
+                    <td>BIKE003</td>
+                    <td><span class="badge bg-warning">Maintenance</span></td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="row justify-content-end">
+                <div class="col-auto">
+                    <button class="btn btn-primary">
+                        <i class="bi bi-bicycle"></i> Add Bike
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js"></script>
+
+</body>
+</html>
