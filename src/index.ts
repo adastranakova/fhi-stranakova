@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from "express";
 import { Request, Response } from 'express';
 import {
@@ -12,14 +13,19 @@ import {
     deleteUserById,
     getAllUsers,
     getUserById,
-    addFundsToUser
+    updateUser,
+    addFundsToUser,
+    deductFundsFromUser
 } from './services/user.service'; // pouzivatelia
 import {
     createStation,
+    deleteStation,
     getAllStations,
     getStationByName,
+    getStationSlots,
     lockBikeInStation,
-    unlockBikeFromStation
+    unlockBikeFromStation,
+    updateStation
 } from './services/station.service'; // stanice
 import {
     rentBike,
@@ -30,6 +36,7 @@ import {
 const app = express();
 const port = 3000;
 
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
@@ -47,15 +54,21 @@ app.delete('/bikes/:id', deleteBikeById);
 app.get('/users', getAllUsers);
 app.get('/users/:id', getUserById);
 app.post('/users', createUser);
-app.post('/users/:id/funds', addFundsToUser);
+app.put('/users/:id', updateUser);
+app.post('/users/:id/add-funds', addFundsToUser);
+app.post('/users/:id/deduct-funds', deductFundsFromUser);
 app.delete('/users/:id', deleteUserById);
 
 // stanice
 app.get('/stations', getAllStations);
 app.get('/stations/:name', getStationByName);
+app.get('/stations/:name/slots', getStationSlots);
 app.post('/stations', createStation);
+app.put('/stations/:name', updateStation);
 app.post('/stations/:name/lock', lockBikeInStation);
 app.post('/stations/:name/unlock', unlockBikeFromStation);
+app.put('/stations/:name', updateStation);
+app.delete('/stations/:name', deleteStation);
 
 // poziciavanie
 app.post('/rentals/rent', rentBike);

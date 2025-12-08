@@ -1,6 +1,6 @@
 // trieda pre statusy bicyklov
 export enum BikeStatus {
-    Available,
-    Rented,
-    Maintenance
+    Available = 'AVAILABLE',
+    Rented = 'RENTED',
+    Maintenance = 'MAINTENANCE'
 }

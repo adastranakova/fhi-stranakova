@@ -13,3 +13,7 @@ export const findStationByName = (name: string): Station | undefined => {
 export const findAllStations = (): Station[] => {
     return Array.from(stations.values());
 };
+
+export const removeStation = (name: string): boolean => {
+    return stations.delete(name);
+};

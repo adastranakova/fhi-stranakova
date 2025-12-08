@@ -22,9 +22,13 @@ export class Station {
         return this.name;
     }
 
+    setName(name: string): void {
+        this.name = name;
+    }
+
     lockBikeInSlot(slotNumber: number, bike: Bike): string | undefined {
         const slot = this.slots.find(s => s.getSlotNumber() === slotNumber);
-        if (slot && slot.isEmpty()) {
+        if (slot) {
             return slot.lockBike(bike);
         }
         return undefined;
@@ -56,4 +60,14 @@ export class Station {
     getAddress() {
         return this.address;
     }
+
+    setAddress(address: string): void {
+        this.address = address;
+    }
+
+    getNumberOfSlots(): number {
+        return this.slots.length;
+    }
+
+
 }

@@ -11,15 +11,23 @@ export class User {
     }
 
     //funkcie
-    getName(): string {
+    getName(name: any): string {
         return this.name;
+    }
+
+    setName(name: string): void {
+        this.name = name;
     }
 
     getMemberId(): string {
         return this.memberId;
     }
 
-    getEmail(): string {
+    getEmail(email: any): string {
         return this.email;
+    }
+
+    setEmail(email: string): void {
+        this.email = email;
     }
 }
