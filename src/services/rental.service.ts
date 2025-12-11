@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { BikeShareSystem } from '../Classes/BikeShareSystem';
-import { findAccountByMemberId } from '../Storage/user.storage';
-import { findStationByName } from '../Storage/station.storage';
+import { BikeShareSystem } from '../archiv/Classes/BikeShareSystem';
+import { findAccountByMemberId } from '../archiv/Storage/user.storage';
+import { findStationByName } from '../archiv/Storage/station.storage';
 
 const bikeShareSystem = new BikeShareSystem("CityBikes");
 
@@ -72,8 +72,14 @@ export const returnBike = (req: Request, res: Response): void => {
 };
 
 export const getActiveRental = (req: Request, res: Response): void => {
-    // @ts-ignore
-    const account = findAccountByMemberId(req.params.memberId);
+    const { memberId } = req.params;
+
+    if (!memberId) {
+        res.status(400).json({ error: 'Member ID is required' });
+        return;
+    }
+
+    const account = findAccountByMemberId(memberId);
 
     if (!account) {
         res.status(404).json({ error: 'User not found' });

@@ -11,7 +11,7 @@ export class User {
     }
 
     //funkcie
-    getName(name: any): string {
+    getName(): string {
         return this.name;
     }
 
@@ -23,7 +23,7 @@ export class User {
         return this.memberId;
     }
 
-    getEmail(email: any): string {
+    getEmail(): string {
         return this.email;
     }
 
