@@ -43,13 +43,11 @@ export const rentBike = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // 5. Create rental
         const rental = await rentalRepo.createRental(user.id, bikeId, slot.stationId);
 
-        // 6. Update bike status to RENTED
+
         await bikeRepo.updateBikeStatus(bikeId, BikeStatus.Rented);
 
-        // 7. Clear bike from slot (user has it now)
         await stationRepo.clearSlot(slot.id);
 
         res.json({

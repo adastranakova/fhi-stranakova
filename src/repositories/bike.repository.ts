@@ -66,3 +66,13 @@ export const bikeExists = async (id: string): Promise<boolean> => {
     if (!row) return false;
     return row.count > 0;
 };
+
+// overenie, ci nahodou nie je bicykel pozicany (aby sme s nim mohli narabat)
+export const bikeHasRentals = async (bikeId: string): Promise<boolean> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM rentals WHERE bike_id = ?',
+        [bikeId]
+    );
+
+    return (rows[0]?.count ?? 0) > 0;
+};

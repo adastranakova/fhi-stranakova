@@ -99,18 +99,30 @@ export const updateBikeStatus = async (req: Request, res: Response): Promise<voi
 export const deleteBikeById = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    if (!id) {
-        res.status(400).json({ error: 'Bike ID is required' });
-        return;
-    }
-
     try {
-        const deleted = await bikeRepo.deleteBike(id);
-        if (deleted) {
-            res.status(204).send();
-        } else {
-            res.status(404).json({ error: 'Bike not found' });
+
+        if (!id) {
+            res.status(400).json({ error: 'Bike ID is required' });
+            return;
         }
+
+        const exists = await bikeRepo.bikeExists(id);
+        if (!exists) {
+            res.status(404).json({ error: 'Bike not found' });
+            return;
+        }
+
+        const hasRentals = await bikeRepo.bikeHasRentals(id);
+        if (hasRentals) {
+            res.status(400).json({
+                error: 'Cannot delete bike with rental history. Set status to MAINTENANCE instead.'
+            });
+            return;
+        }
+
+        await bikeRepo.deleteBike(id);
+
+        res.json({ message: 'Bike deleted successfully' });
     } catch (error) {
         console.error('Error deleting bike:', error);
         res.status(500).json({ error: 'Failed to delete bike' });
