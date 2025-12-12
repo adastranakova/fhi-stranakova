@@ -2,20 +2,37 @@ import { Request, Response } from 'express';
 import * as stationRepo from '../repositories/station.repository';
 import * as bikeRepo from '../repositories/bike.repository';
 
-export const getAllStations = (req: Request, res: Response): void => {
-    const stations = stationRepo.findAllStations();
+export const getAllStations = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const stations = await stationRepo.findAllStations();
 
-    const stationsData = stations.map(station => ({
-        name: station.name,
-        address: station.address,
-        numberOfSlots: station.numberOfSlots,
-        availableBikes: stationRepo.getAvailableBikesCount(station.id)
-    }));
+        const stationsWithSlots = await Promise.all(
+            stations.map(async (station) => {
+                const slots = await stationRepo.findSlotsByStationId(station.id);
+                const availableBikes = await stationRepo.getAvailableBikesCount(station.id);
 
-    res.json(stationsData);
+                return {
+                    name: station.name,
+                    address: station.address,
+                    numberOfSlots: station.numberOfSlots,
+                    availableBikes,
+                    slots: slots.map(slot => ({
+                        slotNumber: slot.slotNumber,
+                        bikeId: slot.bikeId,
+                        status: slot.status
+                    }))
+                };
+            })
+        );
+
+        res.json(stationsWithSlots);
+    } catch (error) {
+        console.error('Error fetching stations:', error);
+        res.status(500).json({ error: 'Failed to fetch stations' });
+    }
 };
 
-export const getStationByName = (req: Request, res: Response): void => {
+export const getStationByName = async (req: Request, res: Response): Promise<void> => {
     const { name } = req.params;
 
     if (!name) {
@@ -23,48 +40,62 @@ export const getStationByName = (req: Request, res: Response): void => {
         return;
     }
 
-    const station = stationRepo.findStationByName(name);
+    try {
+        const station = await stationRepo.findStationByName(name);
+        if (!station) {
+            res.status(404).json({ error: 'Station not found' });
+            return;
+        }
 
-    if (station) {
+        const slots = await stationRepo.findSlotsByStationId(station.id);
+        const availableBikes = await stationRepo.getAvailableBikesCount(station.id);
+
         res.json({
             name: station.name,
             address: station.address,
             numberOfSlots: station.numberOfSlots,
-            availableBikes: stationRepo.getAvailableBikesCount(station.id)
+            availableBikes,
+            slots: slots.map(slot => ({
+                slotNumber: slot.slotNumber,
+                bikeId: slot.bikeId,
+                status: slot.status
+            }))
         });
-    } else {
-        res.status(404).json({ error: 'Station not found' });
+    } catch (error) {
+        console.error('Error fetching station:', error);
+        res.status(500).json({ error: 'Failed to fetch station' });
     }
 };
 
-export const createStation = (req: Request, res: Response): void => {
+export const createStation = async (req: Request, res: Response): Promise<void> => {
     const { name, address, numberOfSlots } = req.body;
 
     if (!name || !address || !numberOfSlots) {
-        res.status(400).json({ error: 'Name, address, and numberOfSlots are required' });
+        res.status(400).json({ error: 'Name, address, and number of slots are required' });
         return;
     }
 
     if (numberOfSlots <= 0) {
-        res.status(400).json({ error: 'Number of slots must be greater than 0' });
+        res.status(400).json({ error: 'Number of slots must be positive' });
         return;
     }
 
-    if (stationRepo.stationExistsByName(name)) {
-        res.status(400).json({ error: 'Station already exists' });
-        return;
+    try {
+        const exists = await stationRepo.stationExistsByName(name);
+        if (exists) {
+            res.status(400).json({ error: 'Station with this name already exists' });
+            return;
+        }
+
+        const station = await stationRepo.createStation(name, address, numberOfSlots);
+        res.status(201).json(station);
+    } catch (error) {
+        console.error('Error creating station:', error);
+        res.status(500).json({ error: 'Failed to create station' });
     }
-
-    const station = stationRepo.createStation(name, address, numberOfSlots);
-
-    res.status(201).json({
-        name: station.name,
-        address: station.address,
-        numberOfSlots: station.numberOfSlots
-    });
 };
 
-export const updateStation = (req: Request, res: Response): void => {
+export const updateStation = async (req: Request, res: Response): Promise<void> => {
     const { name } = req.params;
     const { newName, address } = req.body;
 
@@ -73,46 +104,35 @@ export const updateStation = (req: Request, res: Response): void => {
         return;
     }
 
-    const station = stationRepo.findStationByName(name);
-
-    if (!station) {
-        res.status(404).json({ error: 'Station not found' });
+    if (!newName && !address) {
+        res.status(400).json({ error: 'At least one field (newName or address) must be provided' });
         return;
     }
 
-    // kontrola nazvu stanice - ci uz taka neexistuje
-    if (newName && newName !== station.name && stationRepo.stationExistsByName(newName)) {
-        res.status(400).json({ error: 'Station with this name already exists' });
-        return;
-    }
+    try {
+        const station = await stationRepo.findStationByName(name);
+        if (!station) {
+            res.status(404).json({ error: 'Station not found' });
+            return;
+        }
 
-    const updates: { name?: string; address?: string } = {};
-    if (newName && newName !== station.name) updates.name = newName;
-    if (address && address !== station.address) updates.address = address;
+        if (newName && newName !== name) {
+            const exists = await stationRepo.stationExistsByName(newName);
+            if (exists) {
+                res.status(400).json({ error: 'Station with this name already exists' });
+                return;
+            }
+        }
 
-    if (Object.keys(updates).length === 0) {
-        res.json({
-            name: station.name,
-            address: station.address,
-            numberOfSlots: station.numberOfSlots
-        });
-        return;
-    }
-
-    const updatedStation = stationRepo.updateStation(station.id, updates);
-
-    if (updatedStation) {
-        res.json({
-            name: updatedStation.name,
-            address: updatedStation.address,
-            numberOfSlots: updatedStation.numberOfSlots
-        });
-    } else {
+        const updated = await stationRepo.updateStation(station.id, newName, address);
+        res.json(updated);
+    } catch (error) {
+        console.error('Error updating station:', error);
         res.status(500).json({ error: 'Failed to update station' });
     }
 };
 
-export const deleteStation = (req: Request, res: Response): void => {
+export const deleteStationByName = async (req: Request, res: Response): Promise<void> => {
     const { name } = req.params;
 
     if (!name) {
@@ -120,133 +140,91 @@ export const deleteStation = (req: Request, res: Response): void => {
         return;
     }
 
-    const deleted = stationRepo.deleteStationByName(name);
+    try {
+        const station = await stationRepo.findStationByName(name);
+        if (!station) {
+            res.status(404).json({ error: 'Station not found' });
+            return;
+        }
 
-    if (deleted) {
-        res.status(204).send();
-    } else {
-        res.status(404).json({ error: 'Station not found' });
+        await stationRepo.deleteStation(station.id);
+        res.json({ message: 'Station deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting station:', error);
+        res.status(500).json({ error: 'Failed to delete station' });
     }
 };
 
-export const getStationSlots = (req: Request, res: Response): void => {
+export const addBikeToStation = async (req: Request, res: Response): Promise<void> => {
     const { name } = req.params;
+    const { bikeId } = req.body;
 
-    if (!name) {
-        res.status(400).json({ error: 'Station name is required' });
+    if (!name || !bikeId) {
+        res.status(400).json({ error: 'Station name and bike ID are required' });
         return;
     }
 
-    const station = stationRepo.findStationByName(name);
+    try {
+        const station = await stationRepo.findStationByName(name);
+        if (!station) {
+            res.status(404).json({ error: 'Station not found' });
+            return;
+        }
 
-    if (!station) {
-        res.status(404).json({ error: 'Station not found' });
-        return;
-    }
+        const bike = await bikeRepo.findBikeById(bikeId);
+        if (!bike) {
+            res.status(404).json({ error: 'Bike not found' });
+            return;
+        }
 
-    const slots = stationRepo.findSlotsByStationId(station.id);
+        const emptySlot = await stationRepo.findEmptySlotByStationId(station.id);
+        if (!emptySlot) {
+            res.status(400).json({ error: 'No empty slots available' });
+            return;
+        }
 
-    const slotsData = slots.map(slot => ({
-        slotNumber: slot.slotNumber,
-        isEmpty: slot.bikeId === null,
-        bikeId: slot.bikeId,
-        status: slot.status
-    }));
+        await stationRepo.putBikeInSlot(emptySlot.id, bikeId);
 
-    res.json({
-        name: station.name,
-        slots: slotsData
-    });
-};
-
-export const lockBikeInStation = (req: Request, res: Response): void => {
-    const { name } = req.params;
-    const { bikeId, slotNumber } = req.body;
-
-    if (!name) {
-        res.status(400).json({ error: 'Station name is required' });
-        return;
-    }
-
-    if (!bikeId || !slotNumber) {
-        res.status(400).json({ error: 'Bike ID and slot number are required' });
-        return;
-    }
-
-    const station = stationRepo.findStationByName(name);
-
-    if (!station) {
-        res.status(404).json({ error: 'Station not found' });
-        return;
-    }
-
-    const bike = bikeRepo.findBikeById(bikeId);
-
-    if (!bike) {
-        res.status(404).json({ error: 'Bike not found' });
-        return;
-    }
-
-    const slot = stationRepo.findSlotByStationAndNumber(station.id, slotNumber);
-
-    if (!slot) {
-        res.status(404).json({ error: 'Slot not found' });
-        return;
-    }
-
-    if (slot.bikeId !== null) {
-        res.status(400).json({ error: 'Slot is already occupied' });
-        return;
-    }
-
-    const password = stationRepo.generatePassword();
-    const updatedSlot = stationRepo.lockBikeInSlot(slot.id, bikeId, password);
-
-    if (updatedSlot) {
         res.json({
-            password,
-            slotNumber: updatedSlot.slotNumber,
-            bikeId: updatedSlot.bikeId
+            message: 'Bike added to station successfully',
+            slotNumber: emptySlot.slotNumber
         });
-    } else {
-        res.status(400).json({ error: 'Could not lock bike in slot' });
+    } catch (error) {
+        console.error('Error adding bike to station:', error);
+        res.status(500).json({ error: 'Failed to add bike to station' });
     }
 };
 
-export const unlockBikeFromStation = (req: Request, res: Response): void => {
+export const removeBikeFromStation = async (req: Request, res: Response): Promise<void> => {
     const { name } = req.params;
-    const { password } = req.body;
+    const { bikeId } = req.body;
 
-    if (!name) {
-        res.status(400).json({ error: 'Station name is required' });
+    if (!name || !bikeId) {
+        res.status(400).json({ error: 'Station name and bike ID are required' });
         return;
     }
 
-    if (!password) {
-        res.status(400).json({ error: 'Password is required' });
-        return;
-    }
+    try {
+        const station = await stationRepo.findStationByName(name);
+        if (!station) {
+            res.status(404).json({ error: 'Station not found' });
+            return;
+        }
 
-    const station = stationRepo.findStationByName(name);
+        const slot = await stationRepo.findSlotByBikeId(bikeId);
+        if (!slot || slot.stationId !== station.id) {
+            res.status(404).json({ error: 'Bike not found in this station' });
+            return;
+        }
 
-    if (!station) {
-        res.status(404).json({ error: 'Station not found' });
-        return;
-    }
+        await stationRepo.clearSlot(slot.id);
 
-    const slot = stationRepo.findSlotByPassword(station.id, password);
-
-    if (!slot) {
-        res.status(400).json({ error: 'Invalid password' });
-        return;
-    }
-
-    const bikeId = slot.bikeId;
-    const updatedSlot = stationRepo.unlockBikeFromSlot(slot.id);
-
-    if (updatedSlot && bikeId) {
-        res.json({ bikeId });
-    } else {
-        res.status(400).json({ error: 'Could not unlock bike' });
+        res.json({
+            message: 'Bike removed from station successfully',
+            slotNumber: slot.slotNumber
+        });
+    } catch (error) {
+        console.error('Error removing bike from station:', error);
+        res.status(500).json({ error: 'Failed to remove bike from station' });
     }
 };

@@ -1,14 +1,16 @@
-// Bike
+// aby sme nemuseli kazdy samostatne importovat
+
+// bicykel
 export * from './bike.entity';
 
-// Station
+// stanica
 export * from './station.entity';
 
-// Slot
+// slot
 export * from './slot.entity';
 
-// User
+// pouzivatel
 export * from './user.entity';
 
-// Rental
+// prenajom
 export * from './rental.entity';

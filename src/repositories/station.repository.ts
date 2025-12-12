@@ -1,148 +1,196 @@
-import {StationEntity} from "../entities/station.entity";
+import { pool } from '../config/database';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import {SlotEntity, SlotStatus} from "../entities/slot.entity";
+import {StationEntity} from "../entities/station.entity";
 
-const stations: Map<number, StationEntity> = new Map();
-const slots: Map<number, SlotEntity> = new Map();
-let nextStationId = 1;
-let nextSlotId = 1;
+// vytvorit stanicu
+export const createStation = async (name: string, address: string, numberOfSlots: number): Promise<StationEntity> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'INSERT INTO stations (name, address, number_of_slots) VALUES (?, ?, ?)',
+        [name, address, numberOfSlots]
+    );
 
-export const createStation = (name: string, address: string, numberOfSlots: number): StationEntity => {
-    const station: StationEntity = {
-        id: nextStationId++,
-        name,
-        address,
-        numberOfSlots,
-        createdAt: new Date(),
-        updatedAt: new Date()
-    };
-    stations.set(station.id, station);
-
-    // vytvori sloty pre stanicu
+    // vytvorenie prazdnych slotov pre stanicu
     for (let i = 1; i <= numberOfSlots; i++) {
-        createSlot(station.id, i);
+        await pool.execute(
+            'INSERT INTO slots (slot_number, station_id, status) VALUES (?, ?, ?)',
+            [i, result.insertId, SlotStatus.Empty]
+        );
     }
 
-    return station;
-};
-
-export const findStationById = (id: number): StationEntity | null => {
-    return stations.get(id) || null;
-};
-
-export const findStationByName = (name: string): StationEntity | null => {
-    return Array.from(stations.values()).find(s => s.name === name) || null;
-};
-
-export const findAllStations = (): StationEntity[] => {
-    return Array.from(stations.values());
-};
-
-export const updateStation = (id: number, updates: { name?: string; address?: string }): StationEntity | null => {
-    const station = stations.get(id);
-    if (!station) return null;
-
-    if (updates.name) station.name = updates.name;
-    if (updates.address) station.address = updates.address;
-    station.updatedAt = new Date();
-
-    stations.set(id, station);
-    return station;
-};
-
-export const deleteStation = (id: number): boolean => {
-    // vymaze vsetky sloty
-    const stationSlots = findSlotsByStationId(id);
-    stationSlots.forEach(slot => slots.delete(slot.id));
-
-    return stations.delete(id);
-};
-
-export const deleteStationByName = (name: string): boolean => {
-    const station = findStationByName(name);
-    if (!station) return false;
-    return deleteStation(station.id);
-};
-
-export const stationExistsByName = (name: string): boolean => {
-    return Array.from(stations.values()).some(s => s.name === name);
-};
-
-export const createSlot = (stationId: number, slotNumber: number): SlotEntity => {
-    const slot: SlotEntity = {
-        id: nextSlotId++,
-        slotNumber,
-        stationId,
-        bikeId: null,
-        password: null,
-        status: SlotStatus.Empty
+    return {
+        id: result.insertId,
+        name,
+        address,
+        numberOfSlots
     };
-    slots.set(slot.id, slot);
-    return slot;
 };
 
-export const findSlotById = (id: number): SlotEntity | null => {
-    return slots.get(id) || null;
+//najdenie stanice podla mena
+export const findStationByName = async (name: string): Promise<StationEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM stations WHERE name = ?',
+        [name]
+    );
+    if (!rows[0]) return null;
+
+    return {
+        id: rows[0].id,
+        name: rows[0].name,
+        address: rows[0].address,
+        numberOfSlots: rows[0].number_of_slots
+    };
 };
 
-export const findSlotsByStationId = (stationId: number): SlotEntity[] => {
-    return Array.from(slots.values()).filter(s => s.stationId === stationId);
+// hladanie stanice podla id
+export const findStationById = async (id: number): Promise<StationEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM stations WHERE id = ?',
+        [id]
+    );
+    if (!rows[0]) return null;
+
+    return {
+        id: rows[0].id,
+        name: rows[0].name,
+        address: rows[0].address,
+        numberOfSlots: rows[0].number_of_slots
+    };
 };
 
-export const findSlotByStationAndNumber = (stationId: number, slotNumber: number): SlotEntity | null => {
-    return Array.from(slots.values()).find(
-        s => s.stationId === stationId && s.slotNumber === slotNumber
-    ) || null;
+// vsetky stanice
+export const findAllStations = async (): Promise<StationEntity[]> => {
+    const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM stations');
+    return rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        address: row.address,
+        numberOfSlots: row.number_of_slots
+    }));
 };
 
-export const findEmptySlotByStationId = (stationId: number): SlotEntity | null => {
-    return Array.from(slots.values()).find(
-        s => s.stationId === stationId && s.status === SlotStatus.Empty
-    ) || null;
+// update stanice
+export const updateStation = async (id: number, name?: string, address?: string): Promise<StationEntity | null> => {
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (name) {
+        updates.push('name = ?');
+        values.push(name);
+    }
+    if (address) {
+        updates.push('address = ?');
+        values.push(address);
+    }
+
+    if (updates.length === 0) return null;
+
+    values.push(id);
+    await pool.execute(
+        `UPDATE stations SET ${updates.join(', ')} WHERE id = ?`,
+        values
+    );
+
+    return findStationById(id);
 };
 
-export const findSlotByPassword = (stationId: number, password: string): SlotEntity | null => {
-    return Array.from(slots.values()).find(
-        s => s.stationId === stationId && s.password === password
-    ) || null;
+// vymazanie stanice
+export const deleteStation = async (id: number): Promise<void> => {
+    await pool.execute('DELETE FROM stations WHERE id = ?', [id]);
 };
 
-export const lockBikeInSlot = (slotId: number, bikeId: string, password: string): SlotEntity | null => {
-    const slot = slots.get(slotId);
-    if (!slot || slot.status !== SlotStatus.Empty) return null;
-
-    slot.bikeId = bikeId;
-    slot.password = password;
-    slot.status = SlotStatus.Occupied;
-
-    slots.set(slotId, slot);
-    return slot;
+// ci uz neexistuje stanice s takym menom
+export const stationExistsByName = async (name: string): Promise<boolean> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM stations WHERE name = ?',
+        [name]
+    );
+    return (rows[0]?.count ?? 0) > 0;
 };
 
-export const unlockBikeFromSlot = (slotId: number): SlotEntity | null => {
-    const slot = slots.get(slotId);
-    if (!slot || slot.status !== SlotStatus.Occupied) return null;
-
-    slot.bikeId = null;
-    slot.password = null;
-    slot.status = SlotStatus.Empty;
-
-    slots.set(slotId, slot);
-    return slot;
+// funkcie pre sloty
+export const findSlotsByStationId = async (stationId: number): Promise<SlotEntity[]> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM slots WHERE station_id = ? ORDER BY slot_number',
+        [stationId]
+    );
+    return rows.map(row => ({
+        id: row.id,
+        slotNumber: row.slot_number,
+        stationId: row.station_id,
+        bikeId: row.bike_id,
+        password: row.password,
+        status: row.status
+    }));
 };
 
-export const getAvailableBikesCount = (stationId: number): number => {
-    return Array.from(slots.values()).filter(
-        s => s.stationId === stationId && s.status === SlotStatus.Occupied && s.bikeId !== null
-    ).length;
+export const findEmptySlotByStationId = async (stationId: number): Promise<SlotEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM slots WHERE station_id = ? AND status = ? LIMIT 1',
+        [stationId, SlotStatus.Empty]
+    );
+    if (!rows[0]) return null;
+
+    return {
+        id: rows[0].id,
+        slotNumber: rows[0].slot_number,
+        stationId: rows[0].station_id,
+        bikeId: rows[0].bike_id,
+        password: rows[0].password,
+        status: rows[0].status
+    };
 };
 
-export const generatePassword = (): string => {
-    return Math.floor(1000 + Math.random() * 9000).toString();
+export const findSlotByBikeId = async (bikeId: string): Promise<SlotEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM slots WHERE bike_id = ?',
+        [bikeId]
+    );
+    if (!rows[0]) return null;
+
+    return {
+        id: rows[0].id,
+        slotNumber: rows[0].slot_number,
+        stationId: rows[0].station_id,
+        bikeId: rows[0].bike_id,
+        password: rows[0].password,
+        status: rows[0].status
+    };
 };
 
-export const clearAllStations = (): void => {
-    stations.clear();
-    slots.clear();
-    nextStationId = 1;
-    nextSlotId = 1;
+export const clearSlot = async (slotId: number): Promise<void> => {
+    await pool.execute(
+        'UPDATE slots SET bike_id = NULL, password = NULL, status = ? WHERE id = ?',
+        [SlotStatus.Empty, slotId]
+    );
+};
+
+export const putBikeInSlot = async (slotId: number, bikeId: string): Promise<SlotEntity | null> => {
+    await pool.execute(
+        'UPDATE slots SET bike_id = ?, status = ? WHERE id = ?',
+        [bikeId, SlotStatus.Occupied, slotId]
+    );
+
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM slots WHERE id = ?',
+        [slotId]
+    );
+    if (!rows[0]) return null;
+
+    return {
+        id: rows[0].id,
+        slotNumber: rows[0].slot_number,
+        stationId: rows[0].station_id,
+        bikeId: rows[0].bike_id,
+        password: rows[0].password,
+        status: rows[0].status
+    };
+};
+
+export const getAvailableBikesCount = async (stationId: number): Promise<number> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM slots WHERE station_id = ? AND bike_id IS NOT NULL',
+        [stationId]
+    );
+    return rows[0]?.count ?? 0;
 };

@@ -1,99 +1,103 @@
+import { pool } from '../config/database';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import {RentalEntity} from "../entities/rental.entity";
 
-const rentals: Map<number, RentalEntity> = new Map();
-let nextRentalId = 1;
+//vytvorenie prenajmu
+export const createRental = async (userId: number, bikeId: string, startStationId: number): Promise<RentalEntity> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'INSERT INTO rentals (user_id, bike_id, start_station_id, start_time) VALUES (?, ?, ?, NOW())',
+        [userId, bikeId, startStationId]
+    );
 
-export const createRental = (
-    userId: number,
-    bikeId: string,
-    startStationId: number
-): RentalEntity => {
-    const rental: RentalEntity = {
-        id: nextRentalId++,
-        userId,
-        bikeId,
-        startStationId,
-        startTime: new Date(),
-        endTime: null,
-        endStationId: null,
-        duration: null,
-        cost: null
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM rentals WHERE id = ?',
+        [result.insertId]
+    );
+
+    if (!rows[0]) {
+        throw new Error('Failed to create rental');
+    }
+
+    return {
+        id: rows[0].id,
+        userId: rows[0].user_id,
+        bikeId: rows[0].bike_id,
+        startStationId: rows[0].start_station_id,
+        endStationId: rows[0].end_station_id,
+        startTime: rows[0].start_time,
+        endTime: rows[0].end_time,
+        duration: rows[0].duration,
+        cost: rows[0].cost
     };
-    rentals.set(rental.id, rental);
-    return rental;
 };
 
-export const findRentalById = (id: number): RentalEntity | null => {
-    return rentals.get(id) || null;
+// podla id pouzivatela
+export const findActiveRentalByUserId = async (userId: number): Promise<RentalEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM rentals WHERE user_id = ? AND end_time IS NULL',
+        [userId]
+    );
+    if (!rows[0]) return null;
+
+    return {
+        id: rows[0].id,
+        userId: rows[0].user_id,
+        bikeId: rows[0].bike_id,
+        startStationId: rows[0].start_station_id,
+        endStationId: rows[0].end_station_id,
+        startTime: rows[0].start_time,
+        endTime: rows[0].end_time,
+        duration: rows[0].duration,
+        cost: rows[0].cost
+    };
 };
 
-export const findActiveRentalByUserId = (userId: number): RentalEntity | null => {
-    return Array.from(rentals.values()).find(
-        r => r.userId === userId && r.endTime === null
-    ) || null;
+// vsetky aktivne prenajmy
+export const findAllActiveRentals = async (): Promise<any[]> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        `SELECT 
+            r.id as rentalId,
+            r.bike_id as bikeId,
+            r.start_time as startTime,
+            u.member_id as memberId,
+            u.name as userName
+         FROM rentals r
+         JOIN users u ON r.user_id = u.id
+         WHERE r.end_time IS NULL`
+    );
+
+    return rows.map(row => ({
+        rentalId: row.rentalId,
+        bikeId: row.bikeId,
+        startTime: row.startTime,
+        memberId: row.memberId,
+        userName: row.userName
+    }));
 };
 
-export const findActiveRentalByBikeId = (bikeId: string): RentalEntity | null => {
-    return Array.from(rentals.values()).find(
-        r => r.bikeId === bikeId && r.endTime === null
-    ) || null;
-};
-
-export const findAllActiveRentals = (): RentalEntity[] => {
-    return Array.from(rentals.values()).filter(r => r.endTime === null);
-};
-
-export const findRentalsByUserId = (userId: number): RentalEntity[] => {
-    return Array.from(rentals.values()).filter(r => r.userId === userId);
-};
-
-export const findAllRentals = (): RentalEntity[] => {
-    return Array.from(rentals.values());
-};
-
-export const completeRental = (
+// ukoncenie prenajmu
+export const completeRental = async (
     rentalId: number,
     endStationId: number,
+    durationMinutes: number,
     cost: number
-): RentalEntity | null => {
-    const rental = rentals.get(rentalId);
-    if (!rental || rental.endTime !== null) return null;
-
-    const endTime = new Date();
-    const duration = endTime.getTime() - rental.startTime.getTime();
-
-    rental.endTime = endTime;
-    rental.endStationId = endStationId;
-    rental.duration = duration;
-    rental.cost = cost;
-
-    rentals.set(rentalId, rental);
-    return rental;
-};
-
-export const deleteRental = (id: number): boolean => {
-    return rentals.delete(id);
-};
-
-export const userHasActiveRental = (userId: number): boolean => {
-    return Array.from(rentals.values()).some(
-        r => r.userId === userId && r.endTime === null
+): Promise<void> => {
+    await pool.execute(
+        `UPDATE rentals 
+         SET end_station_id = ?, 
+             end_time = NOW(), 
+             duration = ?, 
+             cost = ? 
+         WHERE id = ?`,
+        [endStationId, durationMinutes, cost, rentalId]
     );
 };
 
-export const bikeIsRented = (bikeId: string): boolean => {
-    return Array.from(rentals.values()).some(
-        r => r.bikeId === bikeId && r.endTime === null
+// aktivny prenajom
+export const userHasActiveRental = async (userId: number): Promise<boolean> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM rentals WHERE user_id = ? AND end_time IS NULL',
+        [userId]
     );
-};
-
-export const calculateCost = (durationMs: number): number => {
-    const minutes = Math.floor(durationMs / 60000);
-    // First 30 minutes free, then $0.15 per minute
-    return Math.max(0, (minutes - 30) * 0.15);
-};
-
-export const clearAllRentals = (): void => {
-    rentals.clear();
-    nextRentalId = 1;
+    return (rows[0]?.count ?? 0) > 0;
 };

@@ -1,21 +1,11 @@
 export interface BikeEntity {
     id: string;
     status: BikeStatus;
-    createdAt: Date;
-    updatedAt: Date;
 }
 
+// status bicyklov - v systeme sa medzi nimi budeme cyklovat
 export enum BikeStatus {
     Available = 'AVAILABLE',
     Rented = 'RENTED',
     Maintenance = 'MAINTENANCE'
-}
-
-export interface BikeDTO {
-    id: string;
-    status: BikeStatus;
-}
-
-export interface CreateBikeInput {
-    id: string;
 }

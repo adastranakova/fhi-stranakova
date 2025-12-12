@@ -1,48 +1,68 @@
+import { pool } from '../config/database';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import {BikeEntity, BikeStatus} from "../entities/bike.entity";
 
-const bikes: Map<string, BikeEntity> = new Map();
+// vyuzitie pool - vytvara pripojenia k databaze
+// zdielane medzi dotazmi v aplikacii, znovu pouzivane
+// automaticky uvolnene po vykonani dotazu
+// aka - poskytne pripojenie - vykona sql dotaz - vrati ho spat do zasonika
+// zjednodusene - zasobnik databazovych pripojeni
 
-export const createBike = (id: string): BikeEntity => {
-    const bike: BikeEntity = {
-        id,
-        status: BikeStatus.Available,
-        createdAt: new Date(),
-        updatedAt: new Date()
-    };
-    bikes.set(id, bike);
-    return bike;
+// vytvorenie bicykla
+export const createBike = async (id: string): Promise<BikeEntity> => {
+    await pool.execute(
+        'INSERT INTO bikes (id, status) VALUES (?, ?)',
+        [id, BikeStatus.Available]
+    );
+    return { id, status: BikeStatus.Available };
 };
 
-export const findBikeById = (id: string): BikeEntity | null => {
-    return bikes.get(id) || null;
+// najdenie bicykla
+export const findBikeById = async (id: string): Promise<BikeEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM bikes WHERE id = ?',
+        [id]
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return { id: row.id, status: row.status };
 };
 
-export const findAllBikes = (): BikeEntity[] => {
-    return Array.from(bikes.values());
+// najdenie vsetkych bicyklov
+export const findAllBikes = async (): Promise<BikeEntity[]> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM bikes'
+    );
+    return rows.map(row => ({ id: row.id, status: row.status }));
 };
 
-export const findBikesByStatus = (status: BikeStatus): BikeEntity[] => {
-    return Array.from(bikes.values()).filter(bike => bike.status === status);
+
+// update bicykla
+export const updateBikeStatus = async (id: string, status: BikeStatus): Promise<BikeEntity | null> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'UPDATE bikes SET status = ? WHERE id = ?',
+        [status, id]
+    );
+    if (result.affectedRows === 0) return null;
+    return { id, status };
 };
 
-export const updateBikeStatus = (id: string, status: BikeStatus): BikeEntity | null => {
-    const bike = bikes.get(id);
-    if (!bike) return null;
-
-    bike.status = status;
-    bike.updatedAt = new Date();
-    bikes.set(id, bike);
-    return bike;
+//vymazanie bicykla
+export const deleteBike = async (id: string): Promise<boolean> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'DELETE FROM bikes WHERE id = ?',
+        [id]
+    );
+    return result.affectedRows > 0;
 };
 
-export const deleteBike = (id: string): boolean => {
-    return bikes.delete(id);
-};
-
-export const bikeExists = (id: string): boolean => {
-    return bikes.has(id);
-};
-
-export const clearAllBikes = (): void => {
-    bikes.clear();
+// ci uz dany bicykel (s id) existuje
+export const bikeExists = async (id: string): Promise<boolean> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM bikes WHERE id = ?',
+        [id]
+    );
+    const row = rows[0];
+    if (!row) return false;
+    return row.count > 0;
 };

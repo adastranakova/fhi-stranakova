@@ -9,13 +9,3 @@ export interface RentalEntity {
     duration: number | null; // pri vrateni sa vypocita (milisekundy)
     cost: number | null;     // cena v dolaroch (pri vrateni sa pocita)
 }
-
-// data transfer object
-export interface RentalDTO {
-    id: number;
-    memberId: string;
-    userName: string;
-    bikeId: string;
-    startTime: Date;
-    duration?: number; // v minutach
-}

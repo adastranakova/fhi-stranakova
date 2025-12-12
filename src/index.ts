@@ -1,3 +1,4 @@
+import { testConnection } from './config/database';
 import cors from 'cors';
 import express from "express";
 import { Request, Response } from 'express';
@@ -7,34 +8,34 @@ import {
     getAllBikes,
     getBikeById,
     updateBikeStatus
-} from './services/bike.service'; // bicykle
+} from './services/bike.service';
 import {
     createUser,
-    deleteUserById,
+    deleteUserByMemberId,
     getAllUsers,
-    getUserById,
+    getUserByMemberId,
     updateUser,
     addFundsToUser,
     deductFundsFromUser
-} from './services/user.service'; // pouzivatelia
+} from './services/user.service';
 import {
     createStation,
-    deleteStation,
+    deleteStationByName,
     getAllStations,
     getStationByName,
-    getStationSlots,
-    lockBikeInStation,
-    unlockBikeFromStation,
-    updateStation
-} from './services/station.service'; // stanice
+    updateStation,
+} from './services/station.service';
 import {
     rentBike,
     returnBike,
-    getActiveRental
-} from './services/rental.service'; // poziciavanie
+    getActiveRental,
+    getAllActiveRentals
+} from './services/rental.service';
 
 const app = express();
 const port = 3000;
+
+testConnection();
 
 app.use(cors());
 app.use(express.json());
@@ -43,7 +44,7 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Bike Share System API is running! 🚴');
 });
 
-// bicykle
+// routes pre bicykle
 app.get('/bikes', getAllBikes);
 app.get('/bikes/:id', getBikeById);
 app.post('/bikes', createBike);
@@ -52,35 +53,29 @@ app.delete('/bikes/:id', deleteBikeById);
 
 // pouzivatelia
 app.get('/users', getAllUsers);
-app.get('/users/:id', getUserById);
+app.get('/users/:memberId', getUserByMemberId);
 app.post('/users', createUser);
-app.put('/users/:id', updateUser);
-app.post('/users/:id/add-funds', addFundsToUser);
-app.post('/users/:id/deduct-funds', deductFundsFromUser);
-app.delete('/users/:id', deleteUserById);
+app.put('/users/:memberId', updateUser);
+app.post('/users/:memberId/add-funds', addFundsToUser);
+app.post('/users/:memberId/deduct-funds', deductFundsFromUser);
+app.delete('/users/:memberId', deleteUserByMemberId);
 
 // stanice
 app.get('/stations', getAllStations);
 app.get('/stations/:name', getStationByName);
-app.get('/stations/:name/slots', getStationSlots);
 app.post('/stations', createStation);
 app.put('/stations/:name', updateStation);
-app.post('/stations/:name/lock', lockBikeInStation);
-app.post('/stations/:name/unlock', unlockBikeFromStation);
-app.put('/stations/:name', updateStation);
-app.delete('/stations/:name', deleteStation);
+app.delete('/stations/:name', deleteStationByName);
 
-// poziciavanie
+// prenajom
 app.post('/rentals/rent', rentBike);
 app.post('/rentals/return', returnBike);
+app.get('/rentals/active', getAllActiveRentals);
 app.get('/rentals/:memberId', getActiveRental);
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
 });
-
-
-
 
 
 

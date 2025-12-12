@@ -1,99 +1,129 @@
+import { pool } from '../config/database';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import {UserEntity} from "../entities/user.entity";
 
-const users: Map<number, UserEntity> = new Map();
-let nextUserId = 1;
-
-export const createUser = (memberId: string, name: string, email: string): UserEntity => {
-    const user: UserEntity = {
-        id: nextUserId++,
+export const createUser = async (memberId: string, name: string, email: string): Promise<UserEntity> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'INSERT INTO users (member_id, name, email, balance) VALUES (?, ?, ?, 0)',
+        [memberId, name, email]
+    );
+    return {
+        id: result.insertId,
         memberId,
         name,
         email,
-        balance: 0,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        balance: 0
     };
-    users.set(user.id, user);
-    return user;
 };
 
-export const findUserById = (id: number): UserEntity | null => {
-    return users.get(id) || null;
+export const findUserById = async (id: number): Promise<UserEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM users WHERE id = ?',
+        [id]
+    );
+    if (!rows[0]) return null;
+    return {
+        id: rows[0].id,
+        memberId: rows[0].member_id,
+        name: rows[0].name,
+        email: rows[0].email,
+        balance: rows[0].balance
+    };
 };
 
-export const findUserByMemberId = (memberId: string): UserEntity | null => {
-    return Array.from(users.values()).find(u => u.memberId === memberId) || null;
+export const findUserByMemberId = async (memberId: string): Promise<UserEntity | null> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM users WHERE member_id = ?',
+        [memberId]
+    );
+    if (!rows[0]) return null;
+    return {
+        id: rows[0].id,
+        memberId: rows[0].member_id,
+        name: rows[0].name,
+        email: rows[0].email,
+        balance: rows[0].balance
+    };
 };
 
-export const findUserByEmail = (email: string): UserEntity | null => {
-    return Array.from(users.values()).find(u => u.email === email) || null;
+export const findAllUsers = async (): Promise<UserEntity[]> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT * FROM users'
+    );
+    return rows.map(row => ({
+        id: row.id,
+        memberId: row.member_id,
+        name: row.name,
+        email: row.email,
+        balance: row.balance
+    }));
 };
 
-export const findAllUsers = (): UserEntity[] => {
-    return Array.from(users.values());
+export const updateUser = async (id: number, updates: { name?: string; email?: string }): Promise<UserEntity | null> => {
+    const setClauses: string[] = [];
+    const values: any[] = [];
+
+    if (updates.name) {
+        setClauses.push('name = ?');
+        values.push(updates.name);
+    }
+    if (updates.email) {
+        setClauses.push('email = ?');
+        values.push(updates.email);
+    }
+
+    if (setClauses.length === 0) {
+        return findUserById(id);
+    }
+
+    values.push(id);
+    await pool.execute(
+        `UPDATE users SET ${setClauses.join(', ')} WHERE id = ?`,
+        values
+    );
+
+    return findUserById(id);
 };
 
-export const updateUser = (id: number, updates: { name?: string; email?: string }): UserEntity | null => {
-    const user = users.get(id);
-    if (!user) return null;
-
-    if (updates.name) user.name = updates.name;
-    if (updates.email) user.email = updates.email;
-    user.updatedAt = new Date();
-
-    users.set(id, user);
-    return user;
+export const addFunds = async (id: number, amount: number): Promise<UserEntity | null> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'UPDATE users SET balance = balance + ? WHERE id = ?',
+        [amount, id]
+    );
+    if (result.affectedRows === 0) return null;
+    return findUserById(id);
 };
 
-export const updateUserBalance = (id: number, newBalance: number): UserEntity | null => {
-    const user = users.get(id);
-    if (!user) return null;
-
-    user.balance = newBalance;
-    user.updatedAt = new Date();
-    users.set(id, user);
-    return user;
+export const deductFunds = async (id: number, amount: number): Promise<UserEntity | null> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?',
+        [amount, id, amount]
+    );
+    if (result.affectedRows === 0) return null;
+    return findUserById(id);
 };
 
-export const addFunds = (id: number, amount: number): UserEntity | null => {
-    const user = users.get(id);
-    if (!user) return null;
 
-    user.balance += amount;
-    user.updatedAt = new Date();
-    users.set(id, user);
-    return user;
+export const deleteUserByMemberId = async (memberId: string): Promise<boolean> => {
+    const [result] = await pool.execute<ResultSetHeader>(
+        'DELETE FROM users WHERE member_id = ?',
+        [memberId]
+    );
+    return result.affectedRows > 0;
 };
 
-export const deductFunds = (id: number, amount: number): UserEntity | null => {
-    const user = users.get(id);
-    if (!user || user.balance < amount) return null;
-
-    user.balance -= amount;
-    user.updatedAt = new Date();
-    users.set(id, user);
-    return user;
+export const userExistsByMemberId = async (memberId: string): Promise<boolean> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM users WHERE member_id = ?',
+        [memberId]
+    );
+    return (rows[0]?.count ?? 0) > 0;
 };
 
-export const deleteUser = (id: number): boolean => {
-    return users.delete(id);
-};
-
-export const deleteUserByMemberId = (memberId: string): boolean => {
-    const user = findUserByMemberId(memberId);
-    if (!user) return false;
-    return users.delete(user.id);
-};
-
-export const userExistsByMemberId = (memberId: string): boolean => {
-    return Array.from(users.values()).some(u => u.memberId === memberId);
-};
-
-export const userExistsByEmail = (email: string): boolean => {
-    return Array.from(users.values()).some(u => u.email === email);
-};
-
-export const clearAllUsers = (): void => {
-    users.clear();
-    nextUserId = 1;
+export const userExistsByEmail = async (email: string): Promise<boolean> => {
+    const [rows] = await pool.execute<RowDataPacket[]>(
+        'SELECT COUNT(*) as count FROM users WHERE email = ?',
+        [email]
+    );
+    return (rows[0]?.count ?? 0) > 0;
 };
